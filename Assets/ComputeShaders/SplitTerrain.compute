@@ -1,0 +1,51 @@
+#pragma kernel SplitTerrain
+
+// Terrain dimensions and tile size
+float TerrainWidth;
+float TerrainHeight;
+float TileSize;
+
+// Starting corner (0 = bottom-left, 1 = bottom-right, 2 = top-left, 3 = top-right)
+int StartCorner;
+
+// Output buffer for tile positions
+RWStructuredBuffer<float3> TilePositions;
+
+[numthreads(8, 8, 1)]
+void SplitTerrain (uint3 id : SV_DispatchThreadID)
+{
+    // Calculate the number of tiles in each dimension
+    int tilesX = (int)(TerrainWidth / TileSize);
+    int tilesZ = (int)(TerrainHeight / TileSize);
+
+    // Calculate the current tile index
+    int tileIndex = id.x + id.y * tilesX;
+
+    // Ensure we don't exceed the number of tiles
+    if (tileIndex >= tilesX * tilesZ)
+        return;
+
+    // Adjust starting position based on the starting corner
+    float startX = 0;
+    float startZ = 0;
+
+    if (StartCorner == 1) // Bottom-right
+        startX = TerrainWidth - TileSize;
+    else if (StartCorner == 2) // Top-left
+        startZ = TerrainHeight - TileSize;
+    else if (StartCorner == 3) // Top-right
+    {
+        startX = TerrainWidth - TileSize;
+        startZ = TerrainHeight - TileSize;
+    }
+
+    // Calculate the position of the current tile
+    float3 tilePosition = float3(
+        startX + (id.x * TileSize) + (TileSize / 2),
+        0,
+        startZ + (id.y * TileSize) + (TileSize / 2)
+    );
+
+    // Store the tile position in the output buffer
+    TilePositions[tileIndex] = tilePosition;
+}
